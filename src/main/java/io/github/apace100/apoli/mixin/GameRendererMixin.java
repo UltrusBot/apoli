@@ -1,6 +1,5 @@
 package io.github.apace100.apoli.mixin;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.power.*;
 import net.fabricmc.api.EnvType;
@@ -92,28 +91,11 @@ public abstract class GameRendererMixin {
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiler/Profiler;pop()V"))
     private void renderOverlayPowers(float tickDelta, long startTime, boolean tick, CallbackInfo ci) {
-        boolean hudHidden = this.client.options.hudHidden;
-        boolean thirdPerson = !client.options.getPerspective().isFirstPerson();
-        PowerHolderComponent.withPower(client.getCameraEntity(), OverlayPower.class, p -> {
-            if(p.getDrawPhase() != OverlayPower.DrawPhase.ABOVE_HUD) {
-                return false;
-            }
-            if(hudHidden && p.doesHideWithHud()) {
-                return false;
-            }
-            if(thirdPerson && !p.shouldBeVisibleInThirdPerson()) {
-                return false;
-            }
-            return true;
-        }, OverlayPower::render);
-    }
-
-    @Inject(
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;getFramebuffer()Lnet/minecraft/client/gl/Framebuffer;"),
-        method = "render"
-    )
-    private void fixHudWithShaderEnabled(float tickDelta, long nanoTime, boolean renderLevel, CallbackInfo info) {
-        RenderSystem.enableTexture();
+        PowerHolderComponent.getPowers(client.getCameraEntity(), OverlayPower.class)
+            .stream()
+            .filter(p -> p.shouldRender(client.options, OverlayPower.DrawPhase.ABOVE_HUD))
+            .sorted(Comparator.comparing(OverlayPower::getPriority))
+            .forEach(OverlayPower::render);
     }
 
     @Inject(at = @At("HEAD"), method = "togglePostProcessorEnabled", cancellable = true)
@@ -125,22 +107,6 @@ public abstract class GameRendererMixin {
             }
         });
     }
-/*
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;setCameraEntity(Lnet/minecraft/entity/Entity;)V"))
-    private void updateShaderPowers(CallbackInfo ci) {
-        if(OriginComponent.hasPower(client.getCameraEntity(), ShaderPower.class)) {
-            OriginComponent.withPower(client.getCameraEntity(), ShaderPower.class, null, shaderPower -> {
-                Identifier shaderLoc = shaderPower.getShaderLocation();
-                loadShader(shaderLoc);
-                currentlyLoadedShader = shaderLoc;
-            });
-        } else {
-            this.shader.close();
-            this.shader = null;
-            this.shadersEnabled = false;
-            currentlyLoadedShader = null;
-        }
-    }*/
 
     // NightVisionPower
     @Inject(at = @At("HEAD"), method = "getNightVisionStrength", cancellable = true)
@@ -220,11 +186,4 @@ public abstract class GameRendererMixin {
         BlockPos.stream(cameraBox).forEach(p -> set.add(p.toImmutable()));
         return set;
     }
-    /* TODO: make this overlay independent of phasing power
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;lerp(FFF)F"))
-    private void drawPhantomizedOverlay(float tickDelta, long startTime, boolean tick, CallbackInfo ci) {
-        if(PowerHolderComponent.getPowers(this.client.player, PhasingPower.class).size() > 0 && !this.client.player.hasStatusEffect(StatusEffects.NAUSEA)) {
-            this.method_31136(OriginsClient.config.phantomizedOverlayStrength);
-        }
-    }*/
 }

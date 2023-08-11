@@ -2,43 +2,27 @@ package io.github.apace100.apoli.power.factory.condition;
 
 import io.github.apace100.apoli.Apoli;
 import io.github.apace100.apoli.data.ApoliDataTypes;
+import io.github.apace100.apoli.power.factory.condition.item.EnchantmentCondition;
+import io.github.apace100.apoli.power.factory.condition.item.FuelCondition;
 import io.github.apace100.apoli.registry.ApoliRegistries;
 import io.github.apace100.apoli.util.Comparison;
 import io.github.apace100.apoli.util.StackPowerUtil;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataTypes;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ToolItem;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.recipe.Ingredient;
-import net.minecraft.util.Identifier;
 import net.minecraft.registry.Registry;
-
-import java.util.List;
+import net.minecraft.util.Identifier;
 
 public class ItemConditions {
 
-    @SuppressWarnings("unchecked")
     public static void register() {
-        register(new ConditionFactory<>(Apoli.identifier("constant"), new SerializableData()
-            .add("value", SerializableDataTypes.BOOLEAN),
-            (data, stack) -> data.getBoolean("value")));
-        register(new ConditionFactory<>(Apoli.identifier("and"), new SerializableData()
-            .add("conditions", ApoliDataTypes.ITEM_CONDITIONS),
-            (data, stack) -> ((List<ConditionFactory<ItemStack>.Instance>)data.get("conditions")).stream().allMatch(
-                condition -> condition.test(stack)
-            )));
-        register(new ConditionFactory<>(Apoli.identifier("or"), new SerializableData()
-            .add("conditions", ApoliDataTypes.ITEM_CONDITIONS),
-            (data, stack) -> ((List<ConditionFactory<ItemStack>.Instance>)data.get("conditions")).stream().anyMatch(
-                condition -> condition.test(stack)
-            )));
+        MetaConditions.register(ApoliDataTypes.ITEM_CONDITION, ItemConditions::register);
         register(new ConditionFactory<>(Apoli.identifier("food"), new SerializableData(),
             (data, stack) -> stack.isFood()));
         register(new ConditionFactory<>(Apoli.identifier("ingredient"), new SerializableData()
@@ -66,14 +50,7 @@ public class ItemConditions {
                 }
                 return ((Comparison)data.get("comparison")).compare(harvestLevel, data.getInt("compare_to"));
             }));
-        register(new ConditionFactory<>(Apoli.identifier("enchantment"), new SerializableData()
-            .add("enchantment", SerializableDataTypes.ENCHANTMENT)
-            .add("compare_to", SerializableDataTypes.INT)
-            .add("comparison", ApoliDataTypes.COMPARISON),
-            (data, stack) -> {
-                int enchantLevel = EnchantmentHelper.getLevel(data.get("enchantment"), stack);
-                return ((Comparison)data.get("comparison")).compare(enchantLevel, data.getInt("compare_to"));
-            }));
+        register(EnchantmentCondition.getFactory());
         register(new ConditionFactory<>(Apoli.identifier("meat"), new SerializableData(),
             (data, stack) -> stack.isFood() && stack.getItem().getFoodComponent().isMeat()));
         register(new ConditionFactory<>(Apoli.identifier("nbt"), new SerializableData()
@@ -134,6 +111,7 @@ public class ItemConditions {
         register(new ConditionFactory<>(Apoli.identifier("is_equippable"), new SerializableData()
             .add("equipment_slot", SerializableDataTypes.EQUIPMENT_SLOT),
             (data, stack) -> MobEntity.getPreferredEquipmentSlot(stack) == data.get("equipment_slot")));
+        register(FuelCondition.getFactory());
     }
 
     private static void register(ConditionFactory<ItemStack> conditionFactory) {
