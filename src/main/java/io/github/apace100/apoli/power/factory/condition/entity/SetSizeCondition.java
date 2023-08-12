@@ -11,34 +11,39 @@ import io.github.apace100.apoli.util.Comparison;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataTypes;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.util.Pair;
-
-import java.util.UUID;
-import java.util.function.Predicate;
 
 public class SetSizeCondition {
 
     public static boolean condition(SerializableData.Instance data, Entity entity) {
-        PowerHolderComponent component = PowerHolderComponent.KEY.get(entity);
+
+        PowerHolderComponent component = PowerHolderComponent.KEY.maybeGet(entity).orElse(null);
         PowerType<?> powerType = data.get("set");
-        Power p = component.getPower(powerType);
-        int value = 0;
-        if(p instanceof EntitySetPower entitySetPower) {
-            value = entitySetPower.size();
+
+        if (component == null || powerType == null) {
+            return false;
         }
-        return ((Comparison) data.get("comparison")).compare(value, data.getInt("compare_to"));
+
+        Comparison comparison = data.get("comparison");
+        int compareTo = data.get("compare_to");
+        int setSize = 0;
+
+        Power power = component.getPower(powerType);
+        if (power instanceof EntitySetPower entitySetPower) {
+            setSize = entitySetPower.size();
+        }
+
+        return comparison.compare(setSize, compareTo);
+
     }
 
     public static ConditionFactory<Entity> getFactory() {
-        return new ConditionFactory<>(Apoli.identifier("set_size"),
+        return new ConditionFactory<>(
+            Apoli.identifier("set_size"),
             new SerializableData()
-                    .add("set", ApoliDataTypes.POWER_TYPE)
-                    .add("comparison", ApoliDataTypes.COMPARISON)
-                    .add("compare_to", SerializableDataTypes.INT),
-                SetSizeCondition::condition
+                .add("set", ApoliDataTypes.POWER_TYPE)
+                .add("comparison", ApoliDataTypes.COMPARISON)
+                .add("compare_to", SerializableDataTypes.INT),
+            SetSizeCondition::condition
         );
     }
 }

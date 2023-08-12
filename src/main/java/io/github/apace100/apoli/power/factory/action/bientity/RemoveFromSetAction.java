@@ -14,16 +14,24 @@ import net.minecraft.util.Pair;
 public class RemoveFromSetAction {
 
     public static void action(SerializableData.Instance data, Pair<Entity, Entity> entities) {
-        PowerHolderComponent component = PowerHolderComponent.KEY.get(entities.getLeft());
+
+        PowerHolderComponent component = PowerHolderComponent.KEY.maybeGet(entities.getLeft()).orElse(null);
         PowerType<?> powerType = data.get("set");
-        Power p = component.getPower(powerType);
-        if(p instanceof EntitySetPower entitySetPower) {
+
+        if (component == null || powerType == null) {
+            return;
+        }
+
+        Power power = component.getPower(powerType);
+        if (power instanceof EntitySetPower entitySetPower) {
             entitySetPower.remove(entities.getRight());
         }
+
     }
 
     public static ActionFactory<Pair<Entity, Entity>> getFactory() {
-        return new ActionFactory<>(Apoli.identifier("remove_from_set"),
+        return new ActionFactory<>(
+            Apoli.identifier("remove_from_set"),
             new SerializableData()
                 .add("set", ApoliDataTypes.POWER_TYPE),
             RemoveFromSetAction::action
