@@ -19,6 +19,7 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -60,7 +61,7 @@ public class InventoryUtil {
 
     public static int checkInventory(SerializableData.Instance data, Entity entity, @Nullable InventoryPower inventoryPower, Function<ItemStack, Integer> processor) {
 
-        Predicate<ItemStack> itemCondition = data.get("item_condition");
+        Predicate<Pair<World, ItemStack>> itemCondition = data.get("item_condition");
         Set<Integer> slots = getSlots(data);
         deduplicateSlots(entity, slots);
 
@@ -69,7 +70,7 @@ public class InventoryUtil {
         for (int slot : slots) {
 
             ItemStack stack = getStack(entity, inventoryPower, slot);
-            if ((itemCondition == null && !stack.isEmpty()) || (itemCondition == null || itemCondition.test(stack))) {
+            if ((itemCondition == null && !stack.isEmpty()) || (itemCondition == null || itemCondition.test(new Pair<>(entity.getWorld(), stack)))) {
                 matches += processor.apply(stack);
             }
 
@@ -89,7 +90,7 @@ public class InventoryUtil {
         deduplicateSlots(entity, slots);
 
         Consumer<Entity> entityAction = data.get("entity_action");
-        Predicate<ItemStack> itemCondition = data.get("item_condition");
+        Predicate<Pair<World, ItemStack>> itemCondition = data.get("item_condition");
         ActionFactory<Pair<World, ItemStack>>.Instance itemAction = data.get("item_action");
 
         int processedItems = 0;
@@ -99,7 +100,7 @@ public class InventoryUtil {
         for (int slot : slots) {
 
             ItemStack stack = getStack(entity, inventoryPower, slot);
-            if (stack.isEmpty() || !(itemCondition == null || itemCondition.test(stack))) {
+            if (stack.isEmpty() || !(itemCondition == null || itemCondition.test(new Pair<>(entity.getWorld(), stack)))) {
                 continue;
             }
 
@@ -129,7 +130,7 @@ public class InventoryUtil {
         deduplicateSlots(entity, slots);
 
         Consumer<Entity> entityAction = data.get("entity_action");
-        Predicate<ItemStack> itemCondition = data.get("item_condition");
+        Predicate<Pair<World, ItemStack>> itemCondition = data.get("item_condition");
         Consumer<Pair<World, ItemStack>> itemAction = data.get("item_action");
 
         ItemStack replacementStack = data.get("stack");
@@ -139,7 +140,7 @@ public class InventoryUtil {
         for (int slot : slots) {
 
             ItemStack stack = getStack(entity, inventoryPower, slot);
-            if (!(itemCondition == null || itemCondition.test(stack))) {
+            if (!(itemCondition == null || itemCondition.test(new Pair<>(entity.getWorld(), stack)))) {
                 continue;
             }
 
@@ -172,14 +173,14 @@ public class InventoryUtil {
         boolean retainOwnership = data.getBoolean("retain_ownership");
 
         Consumer<Entity> entityAction = data.get("entity_action");
-        Predicate<ItemStack> itemCondition = data.get("item_condition");
+        Predicate<Pair<World, ItemStack>> itemCondition = data.get("item_condition");
         Consumer<Pair<World, ItemStack>> itemAction = data.get("item_action");
 
         slots.removeIf(slot -> slotNotWithinBounds(entity, inventoryPower, slot));
         for (int slot : slots) {
 
             ItemStack stack = getStack(entity, inventoryPower, slot);
-            if (stack.isEmpty() || !(itemCondition == null || itemCondition.test(stack))) {
+            if (stack.isEmpty() || !(itemCondition == null || itemCondition.test(new Pair<>(entity.getWorld(), stack)))) {
                 continue;
             }
 
@@ -248,7 +249,7 @@ public class InventoryUtil {
 
     }
 
-    private static final Map<Entity, ItemStack> ENTITY_EMPTY_STACK_MAP = new HashMap<>();
+    private static final Map<Entity, ItemStack> ENTITY_EMPTY_STACK_MAP = new ConcurrentHashMap<>();
 
     public static ItemStack getEntityLinkedEmptyStack(Entity entity) {
         return ENTITY_EMPTY_STACK_MAP.computeIfAbsent(entity, e -> new ItemStack((Void) null));
@@ -274,7 +275,7 @@ public class InventoryUtil {
             }
 
             ItemStack stack = stackReference.get();
-            if (!stack.isEmpty()) {
+            if (!stack.isEmpty() || emptyStackConsumer != null && stack == getEntityLinkedEmptyStack(entity)) {
                 itemStackConsumer.accept(stack);
                 continue;
             }
@@ -283,10 +284,12 @@ public class InventoryUtil {
                 continue;
             }
 
-            ItemStack newStack = getEntityLinkedEmptyStack(entity);
-            emptyStackConsumer.accept(newStack);
+            if (stack == ItemStack.EMPTY) {
+                ItemStack newStack = getEntityLinkedEmptyStack(entity);
+                emptyStackConsumer.accept(newStack);
 
-            ((MutableItemStack) stack).apoli$setFrom(newStack);
+                ((MutableItemStack) stack).apoli$setFrom(newStack);
+            }
 
         }
 
