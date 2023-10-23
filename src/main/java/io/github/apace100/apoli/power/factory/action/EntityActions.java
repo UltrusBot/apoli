@@ -333,6 +333,8 @@ public class EntityActions {
                 component.removePower(data.get("power"), data.getId("source"));
                 component.sync();
             })));
+        register(RevokeAllPowersAction.getFactory());
+        register(RemovePowerAction.getFactory());
         register(ExplodeAction.getFactory());
         register(new ActionFactory<>(Apoli.identifier("dismount"), new SerializableData(),
             (data, entity) -> entity.stopRiding()));
