@@ -444,6 +444,7 @@ public class EntityConditions {
         register(InThunderstormCondition.getFactory());
         register(AdvancementCondition.getFactory());
         register(SetSizeCondition.getFactory());
+        register(HasCommandTagCondition.getFactory());
     }
 
     private static void register(ConditionFactory<Entity> conditionFactory) {
