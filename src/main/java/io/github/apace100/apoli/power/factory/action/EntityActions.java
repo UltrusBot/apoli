@@ -417,6 +417,7 @@ public class EntityActions {
         register(RevokeAdvancementAction.getFactory());
         register(ActionOnSetAction.getFactory());
         register(RandomTeleportAction.getFactory());
+        register(ShowToastAction.getFactory());
     }
 
     private static void register(ActionFactory<Entity> actionFactory) {
