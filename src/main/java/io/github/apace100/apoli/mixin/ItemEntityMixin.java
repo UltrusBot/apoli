@@ -3,13 +3,13 @@ package io.github.apace100.apoli.mixin;
 import io.github.apace100.apoli.power.ActionOnItemPickupPower;
 import io.github.apace100.apoli.power.PreventItemPickupPower;
 import io.github.apace100.apoli.power.Prioritized;
+import io.github.apace100.apoli.util.MiscUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,7 +26,9 @@ public abstract class ItemEntityMixin extends Entity {
 
     @Shadow public abstract ItemStack getStack();
 
-    @Shadow @Nullable private UUID thrower;
+    @Shadow @Nullable private UUID throwerUuid;
+
+    @Shadow @Nullable private Entity thrower;
 
     public ItemEntityMixin(EntityType<?> type, World world) {
         super(type, world);
@@ -36,27 +38,14 @@ public abstract class ItemEntityMixin extends Entity {
     private void apoli$onItemPickup(PlayerEntity player, CallbackInfo ci) {
 
         ItemStack stack = this.getStack();
-        UUID throwerUUID = this.thrower;
+        UUID throwerUUID = this.throwerUuid;
 
         MinecraftServer server = this.getServer();
-        if (server == null) {
-            return;
-        }
-
-        Entity throwerEntity = null;
-        if (throwerUUID != null) {
-            for (ServerWorld world : server.getWorlds()) {
-                if ((throwerEntity = world.getEntity(throwerUUID)) != null) {
-                    break;
-                }
-            }
-        }
-
-        final Entity finalThrowerEntity = throwerEntity;
+        Entity throwerEntity = this.thrower != null ? this.thrower : throwerUUID != null ? MiscUtil.getEntityByUuid(throwerUUID, server) : null;
 
         int preventItemPickupPowers = 0;
         Prioritized.CallInstance<PreventItemPickupPower> pippci = new Prioritized.CallInstance<>();
-        pippci.add(player, PreventItemPickupPower.class, p -> p.doesPrevent(stack, finalThrowerEntity));
+        pippci.add(player, PreventItemPickupPower.class, p -> p.doesPrevent(stack, throwerEntity));
 
         for (int i = pippci.getMaxPriority(); i >= pippci.getMinPriority(); i--) {
 
@@ -67,7 +56,7 @@ public abstract class ItemEntityMixin extends Entity {
             List<PreventItemPickupPower> pipps = pippci.getPowers(i);
 
             preventItemPickupPowers += pipps.size();
-            pipps.forEach(p -> p.executeActions((ItemEntity) (Object) this, finalThrowerEntity));
+            pipps.forEach(p -> p.executeActions((ItemEntity) (Object) this, throwerEntity));
 
         }
 
@@ -77,10 +66,10 @@ public abstract class ItemEntityMixin extends Entity {
         }
 
         Prioritized.CallInstance<ActionOnItemPickupPower> aoippci = new Prioritized.CallInstance<>();
-        aoippci.add(player, ActionOnItemPickupPower.class, p -> p.doesApply(stack, finalThrowerEntity));
+        aoippci.add(player, ActionOnItemPickupPower.class, p -> p.doesApply(stack, throwerEntity));
 
         for (int i = aoippci.getMaxPriority(); i >= aoippci.getMinPriority(); i--) {
-            aoippci.getPowers(i).forEach(p -> p.executeActions(stack, finalThrowerEntity));
+            aoippci.getPowers(i).forEach(p -> p.executeActions(stack, throwerEntity));
         }
 
     }

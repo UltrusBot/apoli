@@ -315,8 +315,8 @@ public class PowerTypes extends IdentifiableMultiJsonDataLoader implements Ident
         JsonElement nameJson = jsonObject.get("name");
         JsonElement descriptionJson = jsonObject.get("description");
 
-        Text name = nameJson == null ? null : Text.Serializer.fromJson(nameJson);
-        Text description = descriptionJson == null ? null : Text.Serializer.fromJson(descriptionJson);
+        Text name = nameJson == null ? null : Text.Serialization.fromJsonTree(nameJson);
+        Text description = descriptionJson == null ? null : Text.Serialization.fromJsonTree(descriptionJson);
 
         boolean hidden = JsonHelper.getBoolean(jsonObject, "hidden", false);
 

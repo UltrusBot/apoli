@@ -11,7 +11,7 @@ public class ApoliClassDataClient {
             ClassDataRegistry.getOrCreate(ClassUtil.castClass(FeatureRenderer.class), "FeatureRenderer");
         
         featureRenderer.addMapping("slime_overlay", SlimeOverlayFeatureRenderer.class);
-        featureRenderer.addMapping("snowman_pumpkin", SnowmanPumpkinFeatureRenderer.class);
+        featureRenderer.addMapping("snowman_pumpkin", SnowGolemPumpkinFeatureRenderer.class);
         featureRenderer.addMapping("fox_held_item", FoxHeldItemFeatureRenderer.class);
         featureRenderer.addMapping("llama_decor", LlamaDecorFeatureRenderer.class);
         featureRenderer.addMapping("elytra", ElytraFeatureRenderer.class);
